@@ -10,6 +10,7 @@ import (
 	"biturl/internal/queue/rabbitmq"
 	"biturl/internal/repository"
 	"biturl/internal/worker"
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -19,25 +20,58 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+
+	"github.com/ClickHouse/clickhouse-go/v2"
 )
 
 func StartsServer() {
 
 	cfg, err := configs.StartEnv()
 
+	ctx := context.Background()
+
 	if err != nil {
 		log.Fatal("error loading your environment variables")
 	}
 
 	app := fiber.New()
+
+	// postgres configuration
 	db, err := gorm.Open(postgres.Open(cfg.DSN), &gorm.Config{})
+	if err != nil {
+		log.Fatal("cannot connect to database")
+	}
+	// redis configuration
 	rdb := redis.NewClient(&redis.Options{
 		Addr: cfg.REDIS_ADDR,
 	})
 
+	// clickhouse db configuration
+	clkhouse, err := clickhouse.Open(&clickhouse.Options{
+		Addr: []string{cfg.CLICKHOUSE_ADDR},
+
+		Auth: clickhouse.Auth{
+			Database: cfg.CLICKHOUSE_DB,
+			Username: cfg.CLICKHOUSE_USER,
+			Password: cfg.CLICKHOUSE_PASSWORD,
+		},
+		Compression: &clickhouse.Compression{
+			Method: clickhouse.CompressionLZ4,
+		},
+		Settings: clickhouse.Settings{
+			"max_execution_time": 60,
+		},
+	})
+
 	if err != nil {
-		log.Fatal("cannot connect to database")
+		log.Fatal("clickhouse connection error: ", err)
 	}
+
+	if err := clkhouse.Ping(ctx); err != nil {
+		log.Fatal("clickhouse ping failed: ", err)
+	}
+
+	// rate limiting configuration
 	rl := ratelimiter.NewRateLimiter(rdb, 10, time.Minute)
 	app.Use(rl.Middleware())
 
@@ -73,10 +107,11 @@ func StartsServer() {
 	}
 
 	rh := &rest.RestHandler{
-		App:        app,
-		DB:         db,
-		RDB:        rdb,
-		RabbitConn: conn,
+		App:            app,
+		DB:             db,
+		RDB:            rdb,
+		RabbitConn:     conn,
+		ClickhouseConn: &clkhouse,
 	}
 	handlers.SetupURLroutes(rh)
 

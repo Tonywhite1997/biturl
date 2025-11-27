@@ -36,9 +36,25 @@ services:
       - "15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
-      
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: biturl-clickhouse
+    restart: always
+    environment:
+      CLICKHOUSE_DB: biturl
+      CLICKHOUSE_USER: biturl
+      CLICKHOUSE_PASSWORD: biturl
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - clickhouse_logs:/var/log/clickhouse-server
 
 volumes:
   postgres_data:
   redis_data:
   rabbitmq_data:
+  clickhouse_data:
+  clickhouse_logs:

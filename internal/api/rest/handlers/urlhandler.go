@@ -3,11 +3,14 @@ package handlers
 import (
 	"biturl/internal/api/rest"
 	"biturl/internal/dto"
+	"biturl/internal/helper"
 	"biturl/internal/repository"
 	"biturl/internal/service"
 	"net/http"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/mssola/user_agent"
 )
 
 type URLhandler struct {
@@ -18,16 +21,17 @@ func SetupURLroutes(rh *rest.RestHandler) {
 
 	app := rh.App
 	svc := service.URLsvc{
-		PG:         repository.NewPostgresRepo(rh.DB),
-		RDB:        repository.NewRedisRepo(rh.RDB),
-		RabbitConn: rh.RabbitConn,
+		PG:           repository.NewPostgresRepo(rh.DB),
+		RDB:          repository.NewRedisRepo(rh.RDB),
+		ClkhouseConn: *repository.NewClkHouseRepo(rh.ClickhouseConn),
+		RabbitConn:   rh.RabbitConn,
 	}
 
 	handler := URLhandler{
 		Svc: svc,
 	}
 
-	app.Post("/", handler.CreateShortURL)
+	app.Post("/shorten", handler.CreateShortURL)
 	app.Get("/:shortcode", handler.LoadURL)
 	app.Delete("/:shortcode", handler.DeleteURL)
 
@@ -65,8 +69,30 @@ func (h *URLhandler) CreateShortURL(ctx *fiber.Ctx) error {
 func (h *URLhandler) LoadURL(ctx *fiber.Ctx) error {
 	shortCode := ctx.Params("shortcode")
 
+	ua := ctx.Get("User-Agent")
+	uaParser := user_agent.New(ua)
+	browser, _ := uaParser.Browser()
+	device := uaParser.Platform()
+	os := uaParser.OS()
+	ip := ctx.IP()
+	country, city, _ := helper.GetGeoInfo(ip)
+
+	stats := repository.Stats{
+		Id:           helper.GenerateShortCode(),
+		Url_short_id: shortCode,
+		User_ip:      ip,
+		User_agent:   ua,
+		Referer:      ctx.Get("referer"),
+		Device:       device,
+		OS:           os,
+		Browser:      browser,
+		Country:      country,
+		City:         city,
+		Timestamp:    time.Now(),
+	}
+
 	c := ctx.UserContext()
-	url, err := h.Svc.LoadURL(shortCode, c)
+	url, err := h.Svc.LoadURL(shortCode, c, stats)
 
 	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(&fiber.Map{

@@ -77,6 +77,8 @@ func StartsServer() {
 
 	redisRepo := repository.NewRedisRepo(rdb)
 
+	// clkhouserepo := repository.NewClkHouseRepo(clkhouse)
+
 	conn, err := amqp.Dial(cfg.RABBITMQ_URL)
 	helper.FailOnError(err, "failed to connect to rabbitmq")
 
@@ -111,7 +113,7 @@ func StartsServer() {
 		DB:             db,
 		RDB:            rdb,
 		RabbitConn:     conn,
-		ClickhouseConn: &clkhouse,
+		ClickhouseConn: clkhouse,
 	}
 	handlers.SetupURLroutes(rh)
 

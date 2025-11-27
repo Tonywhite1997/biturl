@@ -12,15 +12,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/redis/go-redis/v9"
-
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/redis/go-redis/v9"
 )
 
 type URLsvc struct {
-	PG         repository.PGrepo
-	RDB        repository.RedisRepo
-	RabbitConn *amqp.Connection
+	PG           repository.PGrepo
+	RDB          repository.RedisRepo
+	ClkhouseConn repository.ClkHouseRepo
+	RabbitConn   *amqp.Connection
 }
 
 func (r URLsvc) CreateShortURL(input dto.URLdto, ctx context.Context) (string, error) {
@@ -90,7 +90,7 @@ func (r URLsvc) CreateShortURL(input dto.URLdto, ctx context.Context) (string, e
 	return shortCode, nil
 }
 
-func (r URLsvc) LoadURL(shortCode string, ctx context.Context) (string, error) {
+func (r URLsvc) LoadURL(shortCode string, ctx context.Context, stats repository.Stats) (string, error) {
 
 	if len(shortCode) == 0 {
 		return "", errors.New("no short code found")
@@ -116,12 +116,24 @@ func (r URLsvc) LoadURL(shortCode string, ctx context.Context) (string, error) {
 			input.OriginalURL = url.OriginalURL
 			input.ShortCode = shortCode
 			r.RDB.CacheURL(ctx, input, ttl)
+
+			// inserting stats to clickhouse db after redirect
+			err := r.ClkhouseConn.Insert(ctx, stats)
+			if err != nil {
+				fmt.Println("could not insert stats")
+			}
+
 			return url.OriginalURL, nil
 		}
 	} else if err != nil {
 		fmt.Printf("redis get error: %v", err)
 		return "", errors.New("server error")
 	} else {
+		err := r.ClkhouseConn.Insert(ctx, stats)
+		if err != nil {
+			fmt.Println("could not insert stats")
+		}
+
 		return val, nil
 	}
 }

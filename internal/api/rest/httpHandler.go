@@ -13,5 +13,5 @@ type RestHandler struct {
 	DB             *gorm.DB
 	RDB            *redis.Client
 	RabbitConn     *amqp.Connection
-	ClickhouseConn *clickhouse.Conn
+	ClickhouseConn clickhouse.Conn
 }

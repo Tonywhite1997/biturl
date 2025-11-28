@@ -25,8 +25,9 @@ func PublishDeleteTask(conn *amqp.Connection, queuename, shortCode string) error
 		false,
 		false,
 		amqp.Publishing{
-			ContentType: "application/json",
-			Body:        body,
+			ContentType:  "application/json",
+			Body:         body,
+			DeliveryMode: amqp.Persistent,
 		},
 	)
 }

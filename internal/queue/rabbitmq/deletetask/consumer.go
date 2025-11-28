@@ -2,6 +2,7 @@ package queue
 
 import (
 	"biturl/internal/helper"
+	"biturl/internal/queue/rabbitmq"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -10,45 +11,47 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func StartDeleteWorker(ch *amqp.Channel, queueName string, deleteFunc func(ctx context.Context, shortcode string) error) {
+func StartDeleteWorker(conn *amqp.Connection, queueName string, deleteFunc func(ctx context.Context, shortcode string) error) {
+
+	ch, err := conn.Channel()
+	helper.FailOnError(err, "failed to open channel in insert worker")
+
+	_, err = ch.QueueDeclare(rabbitmq.DeleteRedisQueueKey, true, false, false, false, nil)
+	helper.FailOnError(err, "failed to declare queue in insert worker")
 
 	msgs, err := ch.Consume(queueName, "", false, false, false, false, nil)
 	helper.FailOnError(err, "failed to consume")
 
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				fmt.Println("worker panicked:", r)
-			}
-		}()
+	defer helper.RecoverWorker()
 
-		for msg := range msgs {
-			var task DeleteTask
-			if err := json.Unmarshal(msg.Body, &task); err != nil {
-				fmt.Println("invalid message:", err)
-				msg.Ack(false) // acknowledge to skip bad message
-				continue
-			}
+	for msg := range msgs {
+		var task DeleteTask
+		if err := json.Unmarshal(msg.Body, &task); err != nil {
+			fmt.Println("invalid message:", err)
+			msg.Ack(false) // acknowledge to skip bad message
+			continue
+		}
 
-			ctx := context.Background()
-			success := false
+		ctx := context.Background()
+		var lastErr error
 
-			for i := 0; i < 3; i++ {
-				if err := deleteFunc(ctx, task.ShortCode); err == nil {
-					fmt.Println("deleted redis key", task.ShortCode)
-					msg.Ack(false)
-					success = true
-					break
-				} else {
-					fmt.Println("retry failed, attempt", i+1, "error:", err)
-					time.Sleep(5 * time.Second)
-				}
-			}
-
-			if !success {
-				fmt.Println("all retries failed for", task.ShortCode)
-				msg.Nack(false, true) // requeue message
+		for i := 0; i < 3; i++ {
+			if err := deleteFunc(ctx, task.ShortCode); err == nil {
+				fmt.Println("deleted redis key", task.ShortCode)
+				msg.Ack(false)
+				lastErr = nil
+				break
+			} else {
+				lastErr = err
+				fmt.Println("retry failed, attempt", i+1, "error:", err)
+				time.Sleep(helper.RetryInterval(i))
 			}
 		}
-	}()
+
+		if lastErr != nil {
+			fmt.Println("all retries failed for", lastErr)
+			msg.Nack(false, true)
+		}
+	}
+
 }

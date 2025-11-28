@@ -6,6 +6,7 @@ import (
 	"biturl/internal/helper"
 	"biturl/internal/queue/rabbitmq"
 	queue "biturl/internal/queue/rabbitmq/deletetask"
+	"biturl/internal/queue/rabbitmq/insertstat"
 	"biturl/internal/repository"
 	"context"
 	"errors"
@@ -118,9 +119,10 @@ func (r URLsvc) LoadURL(shortCode string, ctx context.Context, stats repository.
 			r.RDB.CacheURL(ctx, input, ttl)
 
 			// inserting stats to clickhouse db after redirect
-			err := r.ClkhouseConn.Insert(ctx, stats)
+			err := insertstat.PublishInsertStat(r.RabbitConn, rabbitmq.InsertClickhouseQueueKey, stats)
+
 			if err != nil {
-				fmt.Println("could not insert stats")
+				fmt.Println("warning: could not enqueue clickhouse insert task", err)
 			}
 
 			return url.OriginalURL, nil
@@ -129,7 +131,7 @@ func (r URLsvc) LoadURL(shortCode string, ctx context.Context, stats repository.
 		fmt.Printf("redis get error: %v", err)
 		return "", errors.New("server error")
 	} else {
-		err := r.ClkhouseConn.Insert(ctx, stats)
+		err := insertstat.PublishInsertStat(r.RabbitConn, rabbitmq.InsertClickhouseQueueKey, stats)
 		if err != nil {
 			fmt.Println("could not insert stats")
 		}

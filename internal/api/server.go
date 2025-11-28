@@ -77,24 +77,21 @@ func StartsServer() {
 
 	redisRepo := repository.NewRedisRepo(rdb)
 
-	// clkhouserepo := repository.NewClkHouseRepo(clkhouse)
+	clkhouserepo := repository.NewClkHouseRepo(clkhouse)
 
 	conn, err := amqp.Dial(cfg.RABBITMQ_URL)
 	helper.FailOnError(err, "failed to connect to rabbitmq")
 
-	ch, err := conn.Channel()
-	helper.FailOnError(err, "failed to open a channel")
-
-	_, err = ch.QueueDeclare(rabbitmq.DeleteRedisQueueKey, true, false, false, false, nil)
-	helper.FailOnError(err, "faild to declare queue")
-
+	// Delete worker
 	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				fmt.Println("worker panicked", r)
-			}
-		}()
-		worker.StartDeleteWorker(ch, rabbitmq.DeleteRedisQueueKey, redisRepo.DeleteCachedURL)
+		defer helper.RecoverWorker()
+		worker.StartDeleteWorker(conn, rabbitmq.DeleteRedisQueueKey, redisRepo.DeleteCachedURL)
+	}()
+
+	// Insert worker
+	go func() {
+		defer helper.RecoverWorker()
+		worker.StartInsertWorker(conn, rabbitmq.InsertClickhouseQueueKey, clkhouserepo.Insert)
 	}()
 
 	err = db.AutoMigrate(&domain.URL{})

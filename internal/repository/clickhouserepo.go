@@ -59,7 +59,7 @@ func (r *ClkHouseRepo) Insert(ctx context.Context, stats Stats) error {
 }
 
 func (r *ClkHouseRepo) GetBySHortID(ctx context.Context, shortURLID string) ([]Stats, error) {
-	rows, err := r.ClkhouseConn.Query(ctx, "SELECT id, url_short_id, user_ip, user_agent, referer, country, city, device, os, browser, timestamp FROM stats WHERE short_url_id=?", shortURLID)
+	rows, err := r.ClkhouseConn.Query(ctx, "SELECT id, url_short_id, user_ip, user_agent, referer, country, city, device, os, browser, timestamp FROM stats WHERE url_short_id=?", shortURLID)
 
 	if err != nil {
 		return nil, err
@@ -81,6 +81,7 @@ func (r *ClkHouseRepo) GetBySHortID(ctx context.Context, shortURLID string) ([]S
 			&s.City,
 			&s.Device,
 			&s.OS,
+			&s.Browser,
 			&s.Timestamp,
 		); err != nil {
 			return nil, err

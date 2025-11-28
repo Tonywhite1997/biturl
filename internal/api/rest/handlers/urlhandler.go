@@ -31,9 +31,11 @@ func SetupURLroutes(rh *rest.RestHandler) {
 		Svc: svc,
 	}
 
-	app.Post("/shorten", handler.CreateShortURL)
-	app.Get("/:shortcode", handler.LoadURL)
-	app.Delete("/:shortcode", handler.DeleteURL)
+	urlRoutes := app.Group("/url")
+
+	urlRoutes.Post("/shorten", handler.CreateShortURL)
+	urlRoutes.Get("/:shortcode", handler.LoadURL)
+	urlRoutes.Delete("/:shortcode", handler.DeleteURL)
 
 }
 

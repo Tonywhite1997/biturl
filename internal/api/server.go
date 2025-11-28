@@ -113,6 +113,7 @@ func StartsServer() {
 		ClickhouseConn: clkhouse,
 	}
 	handlers.SetupURLroutes(rh)
+	handlers.SetupStatsRoute(rh)
 
 	app.Listen(cfg.PORT)
 	fmt.Printf("server running on port: %v", cfg.PORT)

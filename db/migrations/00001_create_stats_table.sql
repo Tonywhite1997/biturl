@@ -16,4 +16,4 @@ ENGINE = MergeTree()
 ORDER BY (url_short_id, timestamp);
 
 -- +goose Down
-DROP TABLE IF EXISTS stats
+DROP TABLE IF EXISTS stats;

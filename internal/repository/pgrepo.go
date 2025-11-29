@@ -10,7 +10,7 @@ type PGrepo interface {
 	CreateShortURL(input *domain.URL) error
 	LoadURL(shortCode string) (domain.URL, error)
 	DeleteURL(shortCode string) error
-	ShortCodeExists(shortCode string) bool
+	ShortCodeExists(statsAccessKey string) (bool, *string)
 }
 
 type pgRepo struct {
@@ -35,14 +35,14 @@ func (u *pgRepo) DeleteURL(shortCode string) error {
 	return u.DB.Where("short_code=?", shortCode).Delete(&url).Error
 }
 
-func (u *pgRepo) ShortCodeExists(shortCode string) bool {
+func (u *pgRepo) ShortCodeExists(statsAccessKey string) (bool, *string) {
 	var url domain.URL
-	err := u.DB.Where("short_code=?", shortCode).First(&url).Error
+	err := u.DB.Where("stats_access_key=?", statsAccessKey).First(&url).Error
 	if err != nil {
-		return false
+		return false, nil
 	}
 
-	return true
+	return true, &url.ShortCode
 }
 
 func NewPostgresRepo(db *gorm.DB) PGrepo {

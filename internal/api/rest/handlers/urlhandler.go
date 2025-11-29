@@ -51,7 +51,7 @@ func (h *URLhandler) CreateShortURL(ctx *fiber.Ctx) error {
 
 	c := ctx.UserContext()
 
-	shortCode, err := h.Svc.CreateShortURL(req, c)
+	shortCode, stats_access_key, err := h.Svc.CreateShortURL(req, c)
 	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
 			"error":  "error occured",
@@ -62,8 +62,9 @@ func (h *URLhandler) CreateShortURL(ctx *fiber.Ctx) error {
 	baseurl := ctx.BaseURL()
 
 	return ctx.Status(fiber.StatusOK).JSON(&fiber.Map{
-		"shorturl": baseurl + "/" + shortCode,
-		"status":   "ok",
+		"shorturl":       baseurl + "/url/" + shortCode,
+		"statsAccessKey": baseurl + "/stats/" + stats_access_key,
+		"status":         "ok",
 	})
 
 }
@@ -76,7 +77,9 @@ func (h *URLhandler) LoadURL(ctx *fiber.Ctx) error {
 	browser, _ := uaParser.Browser()
 	device := uaParser.Platform()
 	os := uaParser.OS()
-	ip := ctx.IP()
+	// ip := ctx.IP()
+	ip := "8.8.8.8"
+
 	country, city, _ := helper.GetGeoInfo(ip)
 
 	stats := repository.Stats{

@@ -24,7 +24,7 @@ type URLsvc struct {
 	RabbitConn   *amqp.Connection
 }
 
-func (r URLsvc) CreateShortURL(input dto.URLdto, ctx context.Context) (string, error) {
+func (r URLsvc) CreateShortURL(input dto.URLdto, ctx context.Context) (string, string, error) {
 
 	// generating expiry date for postgres db: 30 days
 	pgTimeExpiresIn := helper.GenerateDate(30)
@@ -43,7 +43,7 @@ func (r URLsvc) CreateShortURL(input dto.URLdto, ctx context.Context) (string, e
 
 	// checking if user provides original url
 	if len(input.OriginalURL) == 0 {
-		return "", errors.New("provide a url")
+		return "", "", errors.New("provide a url")
 	}
 
 	// if user provides short code, set it as short code
@@ -53,12 +53,12 @@ func (r URLsvc) CreateShortURL(input dto.URLdto, ctx context.Context) (string, e
 		strcode, _ := r.PG.LoadURL(shortCode)
 		fmt.Printf("strCode:%v", strcode)
 		if strcode.ID != 0 {
-			return "", errors.New("short url is not available")
+			return "", "", errors.New("short url is not available")
 			// else check if the length is less than 16 before saving it to db
 		} else {
 			fmt.Printf("code length: %v", len(input.ShortCode))
 			if len(input.ShortCode) > domain.MaxLength {
-				return "", errors.New("provide a shorter url or let us do it for you.")
+				return "", "", errors.New("provide a shorter url or let us do it for you.")
 			}
 		}
 	} else {
@@ -68,15 +68,18 @@ func (r URLsvc) CreateShortURL(input dto.URLdto, ctx context.Context) (string, e
 
 	fmt.Printf("shortcode: %v", shortCode)
 
+	statsAccessKey := "st_" + helper.GenerateShortCode()
+
 	err := r.PG.CreateShortURL(&domain.URL{
-		OriginalURL: input.OriginalURL,
-		ExpiresAt:   pgTimeExpiresIn,
-		ShortCode:   shortCode,
+		OriginalURL:    input.OriginalURL,
+		ExpiresAt:      pgTimeExpiresIn,
+		ShortCode:      shortCode,
+		StatsAccessKey: statsAccessKey,
 	})
 
 	if err != nil {
 		fmt.Printf("url creation error: %v", err)
-		return "", errors.New("invalid request")
+		return "", "", errors.New("invalid request")
 	}
 
 	// save the short code and original url into redis for fast access. set time to live to 3 days
@@ -88,7 +91,7 @@ func (r URLsvc) CreateShortURL(input dto.URLdto, ctx context.Context) (string, e
 		fmt.Printf("saving code to redis error: %v", err)
 	}
 
-	return shortCode, nil
+	return shortCode, statsAccessKey, nil
 }
 
 func (r URLsvc) LoadURL(shortCode string, ctx context.Context, stats repository.Stats) (string, error) {

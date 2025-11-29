@@ -28,18 +28,18 @@ func SetupStatsRoute(rh *rest.RestHandler) {
 
 	statsRoutes := app.Group("/stats")
 
-	statsRoutes.Get("/:short_code", handler.GetStatsByShortCode)
+	statsRoutes.Get("/:stats_access_key", handler.GetStatsByShortCode)
 }
 
 func (h *StatsHander) GetStatsByShortCode(ctx *fiber.Ctx) error {
 
-	shortCode := ctx.Params("short_code")
+	statsAccessKey := ctx.Params("stats_access_key")
 
-	fmt.Println(shortCode)
+	fmt.Println(statsAccessKey)
 
 	c := ctx.UserContext()
 
-	stats, err := h.StatsSVC.GetStatsByShortCode(c, shortCode)
+	stats, err := h.StatsSVC.GetStatsByShortCode(c, statsAccessKey)
 	if err != nil {
 		return ctx.Status(http.StatusBadRequest).JSON(&fiber.Map{
 			"message": "could not get stats",

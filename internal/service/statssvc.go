@@ -12,16 +12,17 @@ type StatsSVC struct {
 	PGRepo         repository.PGrepo
 }
 
-func (s StatsSVC) GetStatsByShortCode(ctx context.Context, shortCode string) ([]repository.Stats, error) {
-	if len(shortCode) == 0 {
+func (s StatsSVC) GetStatsByShortCode(ctx context.Context, statsAccessKey string) ([]repository.Stats, error) {
+	if len(statsAccessKey) == 0 {
 		return nil, errors.New("invalid shortcode")
 	}
 
-	if exists := s.PGRepo.ShortCodeExists(shortCode); !exists {
+	exists, shortCode := s.PGRepo.ShortCodeExists(statsAccessKey)
+	if !exists {
 		return nil, errors.New("invalid url")
 	}
 
-	stats, err := s.ClickhouseRepo.GetBySHortID(ctx, shortCode)
+	stats, err := s.ClickhouseRepo.GetBySHortID(ctx, *shortCode)
 
 	if err != nil {
 		fmt.Println("could not get stats", err)

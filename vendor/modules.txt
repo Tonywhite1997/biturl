@@ -100,6 +100,12 @@ github.com/mattn/go-runewidth
 # github.com/mssola/user_agent v0.6.0
 ## explicit; go 1.13
 github.com/mssola/user_agent
+# github.com/oschwald/geoip2-golang v1.13.0
+## explicit; go 1.21
+github.com/oschwald/geoip2-golang
+# github.com/oschwald/maxminddb-golang v1.13.0
+## explicit; go 1.21
+github.com/oschwald/maxminddb-golang
 # github.com/paulmach/orb v0.12.0
 ## explicit; go 1.15
 github.com/paulmach/orb

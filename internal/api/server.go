@@ -6,6 +6,7 @@ import (
 	"biturl/internal/api/rest/handlers"
 	"biturl/internal/domain"
 	"biturl/internal/helper"
+	"biturl/internal/helper/geo"
 	ratelimiter "biturl/internal/middleware/rate-limiter"
 	"biturl/internal/queue/rabbitmq"
 	"biturl/internal/repository"
@@ -45,6 +46,10 @@ func StartsServer() {
 	rdb := redis.NewClient(&redis.Options{
 		Addr: cfg.REDIS_ADDR,
 	})
+
+	geodb := geo.InitGeoDB("assets/geolocation/GeoLite2-City.mmdb", rdb)
+
+	// fmt.Println(geodb.GEODB.City(net.ParseIP("8.8.8.8")))
 
 	// clickhouse db configuration
 	clkhouse, err := clickhouse.Open(&clickhouse.Options{
@@ -111,6 +116,7 @@ func StartsServer() {
 		RDB:            rdb,
 		RabbitConn:     conn,
 		ClickhouseConn: clkhouse,
+		GEODB:          geodb,
 	}
 	handlers.SetupURLroutes(rh)
 	handlers.SetupStatsRoute(rh)

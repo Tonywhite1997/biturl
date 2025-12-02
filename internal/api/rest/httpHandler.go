@@ -1,6 +1,8 @@
 package rest
 
 import (
+	"biturl/internal/helper/geo"
+
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/gofiber/fiber/v2"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -14,4 +16,5 @@ type RestHandler struct {
 	RDB            *redis.Client
 	RabbitConn     *amqp.Connection
 	ClickhouseConn clickhouse.Conn
+	GEODB          *geo.GeoRedisCache
 }

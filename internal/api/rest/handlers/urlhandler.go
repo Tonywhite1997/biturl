@@ -4,8 +4,10 @@ import (
 	"biturl/internal/api/rest"
 	"biturl/internal/dto"
 	"biturl/internal/helper"
+	"biturl/internal/helper/geo"
 	"biturl/internal/repository"
 	"biturl/internal/service"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -15,6 +17,7 @@ import (
 
 type URLhandler struct {
 	Svc service.URLsvc
+	GEO *geo.GeoRedisCache
 }
 
 func SetupURLroutes(rh *rest.RestHandler) {
@@ -27,8 +30,11 @@ func SetupURLroutes(rh *rest.RestHandler) {
 		RabbitConn:   rh.RabbitConn,
 	}
 
+	geo := rh.GEODB
+
 	handler := URLhandler{
 		Svc: svc,
+		GEO: geo,
 	}
 
 	urlRoutes := app.Group("/url")
@@ -77,10 +83,14 @@ func (h *URLhandler) LoadURL(ctx *fiber.Ctx) error {
 	browser, _ := uaParser.Browser()
 	device := uaParser.Platform()
 	os := uaParser.OS()
-	// ip := ctx.IP()
-	ip := "8.8.8.8"
+	ip := ctx.IP()
+	// ip := "8.8.8.8"
 
-	country, city, _ := helper.GetGeoInfo(ip)
+	c := ctx.UserContext()
+	country, city, err := h.GEO.LookupIP(ip, c)
+	if err != nil {
+		fmt.Printf("cannot get country: %v", err)
+	}
 
 	stats := repository.Stats{
 		Id:           helper.GenerateShortCode(),
@@ -96,7 +106,7 @@ func (h *URLhandler) LoadURL(ctx *fiber.Ctx) error {
 		Timestamp:    time.Now(),
 	}
 
-	c := ctx.UserContext()
+	c = ctx.UserContext()
 	url, err := h.Svc.LoadURL(shortCode, c, stats)
 
 	if err != nil {

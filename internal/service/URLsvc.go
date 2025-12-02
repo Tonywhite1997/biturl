@@ -109,6 +109,26 @@ func (r URLsvc) LoadURL(shortCode string, ctx context.Context, stats repository.
 		if err != nil {
 			return "", errors.New("url not found")
 		} else {
+			// checking if url has expired so i can delete appropriately from redis, postgres and clickhouse
+			isExpired := url.ExpiresAt != nil && url.ExpiresAt.Before(time.Now())
+			fmt.Println(isExpired)
+			if isExpired {
+				err := r.PG.DeleteURL(shortCode)
+				fmt.Println("error deleting url from postgres:", err)
+				if err == nil {
+					queue.PublishDeleteTask(r.RabbitConn, rabbitmq.DeleteRedisQueueKey, url.ShortCode)
+					queue.PublishDeleteTask(r.RabbitConn, rabbitmq.DeleteClickhouseStatQueueKey, url.ShortCode)
+				}
+				// after deleting return resource unavailable error
+				return "", errors.New("resource unavailable")
+			}
+			// before caching it in redis, check the expiry date of the url from postgres is less than 3 days, do not cache if it is less than 3 days.
+			currentDate := time.Now()
+			remaining := url.ExpiresAt.Sub(currentDate).Hours() / 24
+			if remaining < 3 {
+				return url.OriginalURL, nil
+			}
+
 			// if url exists in postgres, create input dto struct since redis "cache url" function requires type of dto.URLdto. Then modify the struct so as to save it in redis. also create a time to live(ttl) for expiry date.
 			var input dto.URLdto
 			ttl := time.Until(*helper.GenerateDate(3))

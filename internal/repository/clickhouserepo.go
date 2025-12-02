@@ -94,7 +94,7 @@ func (r *ClkHouseRepo) GetBySHortID(ctx context.Context, shortURLID string) ([]S
 }
 
 func (r *ClkHouseRepo) GetStatsByDateRange(ctx context.Context, shortURLID string, start, end time.Time) ([]Stats, error) {
-	rows, err := r.ClkhouseConn.Query(ctx, "SELECT id, url_short_id, user_ip, user_agent, referer, country, city, device, os, browser, timestamp WHERE short_url_id=? AND timestamp BETWEEN ? AND ?", shortURLID, start, end)
+	rows, err := r.ClkhouseConn.Query(ctx, "SELECT id, url_short_id, user_ip, user_agent, referer, country, city, device, os, browser, timestamp WHERE url_short_id=? AND timestamp BETWEEN ? AND ?", shortURLID, start, end)
 
 	if err != nil {
 		return nil, err
@@ -127,7 +127,7 @@ func (r *ClkHouseRepo) GetStatsByDateRange(ctx context.Context, shortURLID strin
 }
 
 func (r *ClkHouseRepo) GetByContry(ctx context.Context, shortURLID, country string) ([]Stats, error) {
-	rows, err := r.ClkhouseConn.Query(ctx, "SELECT id, url_short_id, user_ip, user_agent, referer, country, city, device, os, browser, timestamp FROM stats WHERE short_url_id=? AND country=?", shortURLID, country)
+	rows, err := r.ClkhouseConn.Query(ctx, "SELECT id, url_short_id, user_ip, user_agent, referer, country, city, device, os, browser, timestamp FROM stats WHERE url_short_id=? AND country=?", shortURLID, country)
 
 	if err != nil {
 		return nil, err
@@ -158,4 +158,12 @@ func (r *ClkHouseRepo) GetByContry(ctx context.Context, shortURLID, country stri
 	}
 
 	return results, nil
+}
+
+func (r *ClkHouseRepo) DeleteStatsRecord(ctx context.Context, shortURLID string) error {
+	err := r.ClkhouseConn.Exec(ctx, "DELETE FROM stats WHERE url_short_id=? ", shortURLID)
+	if err != nil {
+		return err
+	}
+	return nil
 }

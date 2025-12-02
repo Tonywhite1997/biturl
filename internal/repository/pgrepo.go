@@ -14,6 +14,7 @@ type PGrepo interface {
 	DeleteURL(shortCode string) error
 	ShortCodeExists(statsAccessKey string) (bool, *string)
 	IncreaseExpiryDate(statsAccessKey string, newExpiry time.Time) error
+	FindExpiredURLs() ([]domain.URL, error)
 }
 
 type pgRepo struct {
@@ -60,6 +61,12 @@ func (u *pgRepo) IncreaseExpiryDate(accessKey string, newExpiry time.Time) error
 		Where("stats_access_key=?", accessKey).
 		Update("expires_at", newExpiry).
 		Error
+}
+
+func (u *pgRepo) FindExpiredURLs() ([]domain.URL, error) {
+	var expiredURLs []domain.URL
+	err := u.DB.Where("expired_at < NOW()").Find(&expiredURLs).Error
+	return expiredURLs, err
 }
 
 func NewPostgresRepo(db *gorm.DB) PGrepo {

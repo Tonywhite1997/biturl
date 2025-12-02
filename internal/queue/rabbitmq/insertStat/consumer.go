@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"biturl/internal/helper"
-	"biturl/internal/queue/rabbitmq"
 	"biturl/internal/repository"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -18,7 +17,7 @@ func StartInsertWorker(conn *amqp.Connection, queuename string, insertFunc func(
 	ch, err := conn.Channel()
 	helper.FailOnError(err, "failed to open channel for insert worker")
 
-	_, err = ch.QueueDeclare(rabbitmq.InsertClickhouseQueueKey, true, false, false, false, nil)
+	_, err = ch.QueueDeclare(queuename, true, false, false, false, nil)
 	helper.FailOnError(err, "failed to declare queue for insert worker")
 
 	msgs, err := ch.Consume(

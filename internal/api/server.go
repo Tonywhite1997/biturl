@@ -93,6 +93,11 @@ func StartsServer() {
 		worker.StartDeleteWorker(conn, rabbitmq.DeleteRedisQueueKey, redisRepo.DeleteCachedURL)
 	}()
 
+	go func() {
+		defer helper.RecoverWorker()
+		worker.StartDeleteWorker(conn, rabbitmq.DeleteClickhouseStatQueueKey, clkhouserepo.DeleteStatsRecord)
+	}()
+
 	// Insert worker
 	go func() {
 		defer helper.RecoverWorker()

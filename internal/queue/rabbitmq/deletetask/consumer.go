@@ -2,7 +2,6 @@ package queue
 
 import (
 	"biturl/internal/helper"
-	"biturl/internal/queue/rabbitmq"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -16,7 +15,7 @@ func StartDeleteWorker(conn *amqp.Connection, queueName string, deleteFunc func(
 	ch, err := conn.Channel()
 	helper.FailOnError(err, "failed to open channel in insert worker")
 
-	_, err = ch.QueueDeclare(rabbitmq.DeleteRedisQueueKey, true, false, false, false, nil)
+	_, err = ch.QueueDeclare(queueName, true, false, false, false, nil)
 	helper.FailOnError(err, "failed to declare queue in insert worker")
 
 	msgs, err := ch.Consume(queueName, "", false, false, false, false, nil)
@@ -37,7 +36,7 @@ func StartDeleteWorker(conn *amqp.Connection, queueName string, deleteFunc func(
 
 		for i := 0; i < 3; i++ {
 			if err := deleteFunc(ctx, task.ShortCode); err == nil {
-				fmt.Println("deleted redis key", task.ShortCode)
+				fmt.Println("delete key", task.ShortCode)
 				msg.Ack(false)
 				lastErr = nil
 				break

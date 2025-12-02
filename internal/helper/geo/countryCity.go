@@ -60,9 +60,12 @@ func (g *GeoRedisCache) LookupIP(ipString string, ctx context.Context) (country,
 	}
 
 	country, city, err = GetGeoInfoFromIPAPI(ipString)
-	err = g.RDB.Set(ctx, "geo:"+ipString, fmt.Sprintf("%v|%v", country, city), ttl).Err()
-	if err != nil {
-		fmt.Println(err)
+	if city != "" && country != "" {
+
+		err = g.RDB.Set(ctx, "geo:"+ipString, fmt.Sprintf("%v|%v", country, city), ttl).Err()
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 
 	return country, city, nil

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"biturl/internal/domain"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -9,8 +10,10 @@ import (
 type PGrepo interface {
 	CreateShortURL(input *domain.URL) error
 	LoadURL(shortCode string) (domain.URL, error)
+	LoadURLByAccessKey(accessKey string) (domain.URL, error)
 	DeleteURL(shortCode string) error
 	ShortCodeExists(statsAccessKey string) (bool, *string)
+	IncreaseExpiryDate(statsAccessKey string, newExpiry time.Time) error
 }
 
 type pgRepo struct {
@@ -29,6 +32,13 @@ func (u *pgRepo) LoadURL(shortCode string) (domain.URL, error) {
 	return url, err
 }
 
+func (u *pgRepo) LoadURLByAccessKey(accessKey string) (domain.URL, error) {
+	var url domain.URL
+	err := u.DB.Where("stats_access_key", accessKey).First(&url).Error
+
+	return url, err
+}
+
 // DeleteURL implements [PGrepo].
 func (u *pgRepo) DeleteURL(shortCode string) error {
 	url := domain.URL{}
@@ -43,6 +53,13 @@ func (u *pgRepo) ShortCodeExists(statsAccessKey string) (bool, *string) {
 	}
 
 	return true, &url.ShortCode
+}
+
+func (u *pgRepo) IncreaseExpiryDate(accessKey string, newExpiry time.Time) error {
+	return u.DB.Model(&domain.URL{}).
+		Where("stats_access_key=?", accessKey).
+		Update("expires_at", newExpiry).
+		Error
 }
 
 func NewPostgresRepo(db *gorm.DB) PGrepo {

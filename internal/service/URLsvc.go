@@ -167,3 +167,27 @@ func (r URLsvc) DeleteURL(shortcode string, ctx context.Context) error {
 
 	return nil
 }
+
+func (r URLsvc) IncreaseExpiryDate(accessKey string) error {
+
+	if len(accessKey) == 0 {
+		return errors.New("no access key provided")
+	}
+
+	url, err := r.PG.LoadURLByAccessKey(accessKey)
+	if err != nil {
+		fmt.Println("error loading url with access key:", err)
+		return err
+	}
+
+	currentDate := time.Now()
+	remainingDays := url.ExpiresAt.Sub(currentDate).Hours() / 24
+
+	if remainingDays < 5 {
+		newExpiry := url.ExpiresAt.AddDate(0, 0, 10)
+		return r.PG.IncreaseExpiryDate(accessKey, newExpiry)
+	}
+
+	return nil
+
+}

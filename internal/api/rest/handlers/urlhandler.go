@@ -42,6 +42,7 @@ func SetupURLroutes(rh *rest.RestHandler) {
 	urlRoutes.Post("/shorten", handler.CreateShortURL)
 	urlRoutes.Get("/:shortcode", handler.LoadURL)
 	urlRoutes.Delete("/:shortcode", handler.DeleteURL)
+	urlRoutes.Patch("/:accesskey", handler.IncreaseExpiryDate)
 
 }
 
@@ -133,4 +134,21 @@ func (h *URLhandler) DeleteURL(ctx *fiber.Ctx) error {
 	return ctx.Status(http.StatusOK).JSON(&fiber.Map{
 		"message": "url deleted",
 	})
+}
+
+func (h *URLhandler) IncreaseExpiryDate(ctx *fiber.Ctx) error {
+	accessKey := ctx.Params("accesskey")
+
+	err := h.Svc.IncreaseExpiryDate(accessKey)
+	if err != nil {
+		return ctx.Status(http.StatusBadRequest).JSON(&fiber.Map{
+			"message": "failed to increase expiry date",
+			"details": err.Error(),
+		})
+	}
+
+	return ctx.Status(http.StatusOK).JSON(&fiber.Map{
+		"message": "expiry date updated",
+	})
+
 }

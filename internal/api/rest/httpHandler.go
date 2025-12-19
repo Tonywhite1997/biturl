@@ -2,6 +2,7 @@ package rest
 
 import (
 	"biturl/internal/helper/geo"
+	ratelimiter "biturl/internal/middleware/rate-limiter"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/gofiber/fiber/v2"
@@ -17,4 +18,6 @@ type RestHandler struct {
 	RabbitConn     *amqp.Connection
 	ClickhouseConn clickhouse.Conn
 	GEODB          *geo.GeoRedisCache
+	StatsRatelimit *ratelimiter.RateLimiter
+	URLRateLimit   *ratelimiter.RateLimiter
 }

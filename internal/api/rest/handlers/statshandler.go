@@ -2,16 +2,17 @@ package handlers
 
 import (
 	"biturl/internal/api/rest"
+	ratelimiter "biturl/internal/middleware/rate-limiter"
 	"biturl/internal/repository"
 	"biturl/internal/service"
-	"fmt"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 type StatsHander struct {
-	StatsSVC service.StatsSVC
+	StatsSVC  service.StatsSVC
+	RateLimit ratelimiter.RateLimiter
 }
 
 func SetupStatsRoute(rh *rest.RestHandler) {
@@ -23,34 +24,26 @@ func SetupStatsRoute(rh *rest.RestHandler) {
 	}
 
 	handler := StatsHander{
-		StatsSVC: statsSVC,
+		StatsSVC:  statsSVC,
+		RateLimit: *rh.StatsRatelimit,
 	}
 
-	statsRoutes := app.Group("/stats")
+	statsRoutes := app.Group("/api/stats", rh.StatsRatelimit.Middleware())
 
-	statsRoutes.Get("/:stats_access_key", handler.GetStatsByShortCode)
+	statsRoutes.Get("/:stats_access_key", handler.GetStats)
 }
 
-func (h *StatsHander) GetStatsByShortCode(ctx *fiber.Ctx) error {
+func (h *StatsHander) GetStats(ctx *fiber.Ctx) error {
 
 	statsAccessKey := ctx.Params("stats_access_key")
 
-	fmt.Println(statsAccessKey)
-
 	c := ctx.UserContext()
 
-	stats, err := h.StatsSVC.GetStatsByShortCode(c, statsAccessKey)
+	stats, err := h.StatsSVC.GetStats(c, statsAccessKey)
 	if err != nil {
 		return ctx.Status(http.StatusBadRequest).JSON(&fiber.Map{
 			"message": "could not get stats",
 			"details": err.Error(),
-		})
-	}
-
-	if len(stats) == 0 {
-		return ctx.Status(http.StatusOK).JSON(&fiber.Map{
-			"message": "no stats found for this URL",
-			"data":    []repository.Stats{},
 		})
 	}
 

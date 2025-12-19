@@ -25,23 +25,28 @@ func NewRateLimiter(rdb *redis.Client, limit int, period time.Duration) *RateLim
 }
 
 func (rl *RateLimiter) Middleware() fiber.Handler {
+	// Embed Lua script for atomic INCR + EXPIRE
+	const rateLimiterLua = `
+local current = redis.call("INCR", KEYS[1])
+if current == 1 then
+    redis.call("EXPIRE", KEYS[1], ARGV[1])
+end
+return current
+`
 	return func(c *fiber.Ctx) error {
-		key := fmt.Sprintf("rate:%s", c.IP())
+		key := fmt.Sprintf("rate:%s:%s:%s", c.IP(), c.Method(), c.Route().Path)
+		fmt.Printf("key: %s\n", key)
+
 		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		defer cancel()
 
-		// Increment the counter
-		count, err := rl.RedisClient.Incr(ctx, key).Result()
+		// Execute Lua script atomically
+		count, err := rl.RedisClient.Eval(ctx, rateLimiterLua, []string{key}, int(rl.Period.Seconds())).Int64()
 		if err != nil {
 			fmt.Printf("Redis error: %v\n", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"message": "server error",
 			})
-		}
-
-		// If this is the first request, set the TTL for the period
-		if count == 1 {
-			_, _ = rl.RedisClient.Expire(ctx, key, rl.Period).Result()
 		}
 
 		// Compute remaining requests
@@ -52,7 +57,7 @@ func (rl *RateLimiter) Middleware() fiber.Handler {
 
 		// Get remaining TTL for Retry-After header
 		ttl, err := rl.RedisClient.TTL(ctx, key).Result()
-		if err != nil || ttl < 0 {
+		if err != nil || ttl <= 0 {
 			ttl = rl.Period
 		}
 
@@ -71,4 +76,5 @@ func (rl *RateLimiter) Middleware() fiber.Handler {
 
 		return c.Next()
 	}
+
 }

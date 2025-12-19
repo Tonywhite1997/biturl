@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/postgres"
@@ -35,7 +36,16 @@ func StartsServer() {
 		log.Fatal("error loading your environment variables")
 	}
 
+	c := cors.New(cors.Config{
+		AllowOrigins:     "http://localhost:5173",
+		AllowHeaders:     "Authorization , Content-Type, Accept",
+		AllowMethods:     "PUT, PATCH,POST, GET, OPTIONS,DELETE",
+		AllowCredentials: true,
+	})
+
 	app := fiber.New()
+
+	app.Use(c)
 
 	// postgres configuration
 	db, err := gorm.Open(postgres.Open(cfg.DSN), &gorm.Config{})
@@ -77,8 +87,8 @@ func StartsServer() {
 	}
 
 	// rate limiting configuration
-	rl := ratelimiter.NewRateLimiter(rdb, 10, time.Minute)
-	app.Use(rl.Middleware())
+	urlRateLimit := ratelimiter.NewRateLimiter(rdb, 10, time.Minute*1)
+	statsRateLimit := ratelimiter.NewRateLimiter(rdb, 100, time.Minute*1)
 
 	redisRepo := repository.NewRedisRepo(rdb)
 
@@ -122,6 +132,8 @@ func StartsServer() {
 		RabbitConn:     conn,
 		ClickhouseConn: clkhouse,
 		GEODB:          geodb,
+		StatsRatelimit: statsRateLimit,
+		URLRateLimit:   urlRateLimit,
 	}
 	handlers.SetupURLroutes(rh)
 	handlers.SetupStatsRoute(rh)

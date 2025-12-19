@@ -16,6 +16,7 @@ type Config struct {
 	CLICKHOUSE_PASSWORD string
 	CLICKHOUSE_USER     string
 	IPINFO_KEY          string
+	CLIENT_BASE_URL     string
 }
 
 func StartEnv() (cfg *Config, err error) {
@@ -30,6 +31,7 @@ func StartEnv() (cfg *Config, err error) {
 	clickhouse_user := os.Getenv("CLICKHOUSE_USER")
 	clickhouse_password := os.Getenv("CLICKHOUSE_PASSWORD")
 	ipinfo_key := os.Getenv("IP_INFO_KEY")
+	client_base_url := os.Getenv("CLIENT_BASE_URL")
 
-	return &Config{PORT: port, DSN: dsn, REDIS_ADDR: redisAddr, RABBITMQ_URL: rbtmq_url, CLICKHOUSE_ADDR: clickhouse_addr, CLICKHOUSE_DB: clickhouse_db, CLICKHOUSE_PASSWORD: clickhouse_password, CLICKHOUSE_USER: clickhouse_user, IPINFO_KEY: ipinfo_key}, err
+	return &Config{PORT: port, DSN: dsn, REDIS_ADDR: redisAddr, RABBITMQ_URL: rbtmq_url, CLICKHOUSE_ADDR: clickhouse_addr, CLICKHOUSE_DB: clickhouse_db, CLICKHOUSE_PASSWORD: clickhouse_password, CLICKHOUSE_USER: clickhouse_user, IPINFO_KEY: ipinfo_key, CLIENT_BASE_URL: client_base_url}, err
 }

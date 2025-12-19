@@ -5,6 +5,7 @@ import (
 	"biturl/internal/dto"
 	"biturl/internal/helper"
 	"biturl/internal/helper/geo"
+	ratelimiter "biturl/internal/middleware/rate-limiter"
 	"biturl/internal/repository"
 	"biturl/internal/service"
 	"fmt"
@@ -16,8 +17,9 @@ import (
 )
 
 type URLhandler struct {
-	Svc service.URLsvc
-	GEO *geo.GeoRedisCache
+	Svc          service.URLsvc
+	GEO          *geo.GeoRedisCache
+	URLRateLimit *ratelimiter.RateLimiter
 }
 
 func SetupURLroutes(rh *rest.RestHandler) {
@@ -33,14 +35,15 @@ func SetupURLroutes(rh *rest.RestHandler) {
 	geo := rh.GEODB
 
 	handler := URLhandler{
-		Svc: svc,
-		GEO: geo,
+		Svc:          svc,
+		GEO:          geo,
+		URLRateLimit: rh.URLRateLimit,
 	}
 
-	urlRoutes := app.Group("/url")
+	app.Get("/:shortcode", handler.URLRateLimit.Middleware(), handler.LoadURL)
 
+	urlRoutes := app.Group("/api/url", handler.URLRateLimit.Middleware())
 	urlRoutes.Post("/shorten", handler.CreateShortURL)
-	urlRoutes.Get("/:shortcode", handler.LoadURL)
 	urlRoutes.Delete("/:shortcode", handler.DeleteURL)
 	urlRoutes.Patch("/:accesskey", handler.IncreaseExpiryDate)
 
@@ -69,9 +72,8 @@ func (h *URLhandler) CreateShortURL(ctx *fiber.Ctx) error {
 	baseurl := ctx.BaseURL()
 
 	return ctx.Status(fiber.StatusOK).JSON(&fiber.Map{
-		"shorturl":       baseurl + "/url/" + shortCode,
-		"statsAccessKey": baseurl + "/stats/" + stats_access_key,
-		"status":         "ok",
+		"shorturl":       baseurl + "/" + shortCode,
+		"statsAccessKey": stats_access_key,
 	})
 
 }

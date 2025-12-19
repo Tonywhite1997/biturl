@@ -185,6 +185,10 @@ func (r URLsvc) DeleteURL(shortcode string, ctx context.Context) error {
 		fmt.Println("warning: could not enqueue redis delete task", err)
 	}
 
+	if err := queue.PublishDeleteTask(r.RabbitConn, rabbitmq.DeleteClickhouseStatQueueKey, shortcode); err != nil {
+		fmt.Println("warning: could not enqueue clickhouse delete task", err)
+	}
+
 	return nil
 }
 

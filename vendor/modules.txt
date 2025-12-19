@@ -38,6 +38,7 @@ github.com/go-faster/errors
 github.com/gofiber/fiber/v2
 github.com/gofiber/fiber/v2/internal/schema
 github.com/gofiber/fiber/v2/log
+github.com/gofiber/fiber/v2/middleware/cors
 github.com/gofiber/fiber/v2/utils
 # github.com/google/uuid v1.6.0
 ## explicit

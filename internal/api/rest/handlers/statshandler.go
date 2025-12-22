@@ -43,7 +43,7 @@ func (h *StatsHander) GetStats(ctx *fiber.Ctx) error {
 	if err != nil {
 		return ctx.Status(http.StatusBadRequest).JSON(&fiber.Map{
 			"message": "could not get stats",
-			"details": err.Error(),
+			"detail":  err.Error(),
 		})
 	}
 

@@ -59,6 +59,13 @@ func (h *URLhandler) CreateShortURL(ctx *fiber.Ctx) error {
 		})
 	}
 
+	if !helper.IsValidURL(req.OriginalURL) {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":  "invalid URL format",
+			"detail": "Long url must be a valid URL with a scheme (http/https) and host",
+		})
+	}
+
 	c := ctx.UserContext()
 
 	shortCode, stats_access_key, err := h.Svc.CreateShortURL(req, c)
@@ -145,7 +152,7 @@ func (h *URLhandler) IncreaseExpiryDate(ctx *fiber.Ctx) error {
 	if err != nil {
 		return ctx.Status(http.StatusBadRequest).JSON(&fiber.Map{
 			"message": "failed to increase expiry date",
-			"details": err.Error(),
+			"detail":  err.Error(),
 		})
 	}
 

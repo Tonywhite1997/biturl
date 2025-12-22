@@ -18,17 +18,17 @@ func (s StatsSVC) GetStats(ctx context.Context, statsAccessKey string) (*dto.Sta
 		return nil, errors.New("invalid shortcode")
 	}
 
-	exists, shortCode, originalURL := s.PGRepo.ShortCodeExists(statsAccessKey)
+	exists, url := s.PGRepo.ShortCodeExists(statsAccessKey)
 	if !exists {
 		return nil, errors.New("invalid url")
 	}
 
-	totalClicks, err := s.ClickhouseRepo.GetTotalClicks(ctx, *shortCode)
-	totalCountries, err := s.ClickhouseRepo.GetCountryClicks(ctx, *shortCode)
-	totalDevices, err := s.ClickhouseRepo.GetDeviceClicks(ctx, *shortCode)
-	uniqueVisitors, err := s.ClickhouseRepo.GetUniqueVisitors(ctx, *shortCode)
-	dailyClicks, err := s.ClickhouseRepo.GetDailyClicks(ctx, *shortCode)
-	totalBrowsers, err := s.ClickhouseRepo.GetBrowserClicks(ctx, *shortCode)
+	totalClicks, err := s.ClickhouseRepo.GetTotalClicks(ctx, url.ShortCode)
+	totalCountries, err := s.ClickhouseRepo.GetCountryClicks(ctx, url.ShortCode)
+	totalDevices, err := s.ClickhouseRepo.GetDeviceClicks(ctx, url.ShortCode)
+	uniqueVisitors, err := s.ClickhouseRepo.GetUniqueVisitors(ctx, url.ShortCode)
+	dailyClicks, err := s.ClickhouseRepo.GetDailyClicks(ctx, url.ShortCode)
+	totalBrowsers, err := s.ClickhouseRepo.GetBrowserClicks(ctx, url.ShortCode)
 
 	if err != nil {
 		fmt.Println("could not get stats", err)
@@ -42,7 +42,8 @@ func (s StatsSVC) GetStats(ctx context.Context, statsAccessKey string) (*dto.Sta
 		Devices:        totalDevices,
 		Countries:      totalCountries,
 		DailyStats:     dailyClicks,
-		OriginalURL:    *originalURL,
+		OriginalURL:    url.OriginalURL,
+		ExpiresAt:      url.ExpiresAt,
 	}
 
 	return &results, nil

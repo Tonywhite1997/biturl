@@ -12,7 +12,7 @@ type PGrepo interface {
 	LoadURL(shortCode string) (domain.URL, error)
 	LoadURLByAccessKey(accessKey string) (domain.URL, error)
 	DeleteURL(shortCode string) error
-	ShortCodeExists(statsAccessKey string) (bool, *string, *string)
+	ShortCodeExists(statsAccessKey string) (bool, domain.URL)
 	IncreaseExpiryDate(statsAccessKey string, newExpiry time.Time) error
 	FindExpiredURLs() ([]domain.URL, error)
 }
@@ -46,14 +46,14 @@ func (u *pgRepo) DeleteURL(shortCode string) error {
 	return u.DB.Where("short_code=?", shortCode).Delete(&url).Error
 }
 
-func (u *pgRepo) ShortCodeExists(statsAccessKey string) (bool, *string, *string) {
+func (u *pgRepo) ShortCodeExists(statsAccessKey string) (bool, domain.URL) {
 	var url domain.URL
 	err := u.DB.Where("stats_access_key=?", statsAccessKey).First(&url).Error
 	if err != nil {
-		return false, nil, nil
+		return false, domain.URL{}
 	}
 
-	return true, &url.ShortCode, &url.OriginalURL
+	return true, url
 }
 
 func (u *pgRepo) IncreaseExpiryDate(accessKey string, newExpiry time.Time) error {

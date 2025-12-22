@@ -207,6 +207,10 @@ func (r URLsvc) IncreaseExpiryDate(accessKey string) error {
 	currentDate := time.Now()
 	remainingDays := url.ExpiresAt.Sub(currentDate).Hours() / 24
 
+	if remainingDays > 5 {
+		return errors.New("can't upgrade expiry date that is bigger than 5 days")
+	}
+
 	if remainingDays < 5 {
 		newExpiry := url.ExpiresAt.AddDate(0, 0, 10)
 		return r.PG.IncreaseExpiryDate(accessKey, newExpiry)
